@@ -1,4 +1,6 @@
+using System;
 using System.ComponentModel.DataAnnotations;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -28,9 +30,26 @@ namespace PrintIt.ServiceHost.Controllers
                 pageRange: request.PageRange,
                 numberOfCopies: request.Copies ?? 1,
                 paperSource: request.PaperSource, 
-                paperSize: request.PaperSize);
+                paperSize: request.PaperSize,
+                isColor: request.IsColor,
+                isLandscape: request.IsLandscape);
             return Ok();
         }
+
+        [HttpPost]
+        [Route("pipe")]
+        public async Task<IActionResult> PrintZPLPipe([FromForm] PrintZPLTemplateRequest request)
+        {
+            await using Stream streamFile = request.File.OpenReadStream();
+            _pdfPrintService.PrintZPLFile(request.PrinterPath, streamFile); 
+            // _pdfPrintService.PrintZPL(request.PrinterPath, request.File); 
+            return Ok();
+        }
+        // public IActionResult PrintSimpleTextPipe([FromForm] PrintSimpleTextTemplateRequest request)
+        // {
+        //     _pdfPrintService.PrintSimpleText(request.PrinterPath);   
+        //     return Ok();
+        // }
     }
 
     public sealed class PrintFromTemplateRequest
@@ -48,5 +67,23 @@ namespace PrintIt.ServiceHost.Controllers
         public string PaperSource { get; set; }
 
         public string PaperSize { get; set; }
+
+        public bool IsColor { get; set; }
+
+        public bool IsLandscape { get; set; }
+    }
+
+    public sealed class PrintSimpleTextTemplateRequest
+    {
+        [Required]
+        public string PrinterPath { get; set; }
+    }
+
+    public sealed class PrintZPLTemplateRequest
+    {
+        [Required]
+        public string PrinterPath { get; set; }
+        [Required]
+        public IFormFile File { get; set; }
     }
 }

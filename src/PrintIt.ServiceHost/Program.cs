@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -14,9 +15,28 @@ namespace PrintIt.ServiceHost
     [ExcludeFromCodeCoverage]
     public static class Program
     {
+
+
         public static void Main(string[] args)
         {
             PdfLibrary.EnsureInitialized();
+
+            // For some reason the .env cant be found cause when we are starting in another folder when running dotnet run
+            string currentDirectory = Directory.GetCurrentDirectory();
+            while (!File.Exists(Path.Combine(currentDirectory, ".env")))
+            {
+                currentDirectory = Directory.GetParent(currentDirectory)?.FullName;
+                
+                // If we've reached the root directory and still haven't found the .env file
+                if (currentDirectory == null)
+                {
+                    throw new FileNotFoundException("Could not find the .env file.");
+                }
+            }
+
+            string envPath = Path.Combine(currentDirectory, ".env");
+            DotNetEnv.Env.Load(envPath);
+            
 
             var isService = !(Debugger.IsAttached || args.Contains("--console"));
 
@@ -39,12 +59,13 @@ namespace PrintIt.ServiceHost
                 host.Run();
             }
         }
-
         private static IWebHostBuilder CreateWebHostBuilder(string[] args, bool isService)
         {
+            
             IConfiguration configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false)
+                .AddEnvironmentVariables()
                 .Build();
 
             return WebHost.CreateDefaultBuilder(args)
@@ -65,9 +86,10 @@ namespace PrintIt.ServiceHost
                         });
                 })
                 .UseStartup<Startup>()
-                .UseUrls(configuration.GetValue<string>("Host:Urls"))
-                .UseKestrel()
-                .UseConfiguration(configuration);
+                // .UseUrls(configuration.GetValue<string>("Host:Urls"))
+                .UseUrls(Environment.GetEnvironmentVariable("HOST") + Environment.GetEnvironmentVariable("PORT"))
+                .UseKestrel();
+                // .UseConfiguration(configuration);
         }
     }
 }
