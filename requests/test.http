@@ -112,3 +112,14 @@ None
 
 ###
 GET http://localhost:9000/printers/list
+
+###
+GET https://catfact.ninja/fact
+
+###
+POST https://httpbin.org/post
+Content-Type: application/json
+
+{
+   "element": "value"
+}

@@ -27,12 +27,14 @@ namespace PrintIt.ServiceHost.Controllers
             await using Stream pdfStream = request.PdfFile.OpenReadStream();
             _pdfPrintService.Print(pdfStream,
                 printerName: request.PrinterPath,
+                documentName: request.DocumentName,
                 pageRange: request.PageRange,
                 numberOfCopies: request.Copies ?? 1,
                 paperSource: request.PaperSource, 
                 paperSize: request.PaperSize,
                 isColor: request.IsColor,
-                isLandscape: request.IsLandscape);
+                isLandscape: request.IsLandscape,
+                printToFile: request.PrintToFile);
             return Ok();
         }
 
@@ -60,6 +62,8 @@ namespace PrintIt.ServiceHost.Controllers
         [Required]
         public string PrinterPath { get; set; }
 
+        public string DocumentName { get; set; }
+
         public string PageRange { get; set; }
 
         public int? Copies { get; set; }
@@ -71,6 +75,8 @@ namespace PrintIt.ServiceHost.Controllers
         public bool IsColor { get; set; }
 
         public bool IsLandscape { get; set; }
+
+        public bool PrintToFile { get; set; }
     }
 
     public sealed class PrintSimpleTextTemplateRequest

@@ -20,7 +20,7 @@ namespace PrintIt.Core
             _logger = logger;
         }
 
-        public void Print(Stream pdfStream, string printerName, string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false)
+        public void Print(Stream pdfStream, string printerName, string documentName = "file.pdf", string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false, bool printToFile = false)
         {
             if (pdfStream == null)
                 throw new ArgumentNullException(nameof(pdfStream));
@@ -30,6 +30,7 @@ namespace PrintIt.Core
             _logger.LogInformation($"Printing PDF containing {document.PageCount} page(s) to printer '{printerName}'");
 
             using var printDocument = new PrintDocument();
+            printDocument.DocumentName = documentName;
             printDocument.PrinterSettings.PrinterName = printerName;
             printDocument.PrinterSettings.Copies = (short)Math.Clamp(numberOfCopies, 1, short.MaxValue);
             printDocument.DefaultPageSettings.Color = false; // Set the page default's to not print in color
@@ -82,6 +83,14 @@ namespace PrintIt.Core
             }
 
             _logger.LogInformation($"Printing Document in Color ? : {printDocument.DefaultPageSettings.Color}");
+
+            if (printToFile)
+            {
+                string uniqueId = DateTime.Now.ToString("yyyyMMddHHmmss");
+                string newDocumentName = $"{documentName}_{uniqueId}.pdf";
+                printDocument.PrinterSettings.PrintFileName = $"C:/Users/AlejandroLopez/Documents/VirtualPrintFiles/{newDocumentName}";
+                printDocument.PrinterSettings.PrintToFile = true; // Skip the save file dialog
+            }
 
             PrintState state = PrintStateFactory.Create(document, pageRange);
             printDocument.PrintPage += (_, e) => PrintDocumentOnPrintPage(e, state);
@@ -188,7 +197,7 @@ namespace PrintIt.Core
 
     public interface IPdfPrintService
     {
-        void Print(Stream pdfStream, string printerName, string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false);
+        void Print(Stream pdfStream, string printerName, string documentName, string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false, bool printToFile = false);
 
         void PrintSimpleText(string printerName);
 
