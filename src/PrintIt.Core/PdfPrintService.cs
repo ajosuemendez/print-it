@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
+using System.Printing;
+
+// using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using PrintIt.Core.Internal;
 using PrintIt.Core.Pdfium;
@@ -15,12 +19,38 @@ namespace PrintIt.Core
     {
         private readonly ILogger<PdfPrintService> _logger;
 
+        private readonly Dictionary<int, JobStatus> _jobStatuses = new Dictionary<int, JobStatus>();
+
+        // [DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
+        // public static extern bool OpenPrinter(string printerName, out IntPtr hPrinter, IntPtr defaultPrinter);
+
+        // [DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
+        // public static extern bool EnumJobs(IntPtr hPrinter, uint firstJob, uint noJobs, uint level, IntPtr jobInfo, uint cbBuf, ref uint pcbNeeded, ref uint pcReturned);
+
+        // [DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
+        // public static extern bool ClosePrinter(IntPtr hPrinter);
+
+        // public struct JOB_INFO_1
+        // {
+        //     public uint JobId;
+        //     public string PrinterName;
+        //     public string MachineName;
+        //     public string UserName;
+        //     public string Document;
+        //     public string DataType;
+        //     public string Status;
+        //     public uint StatusValue;
+        //     public uint Priority;
+        //     public uint Position;
+        //     public uint TotalPages;
+        //     public uint PagesPrinted;
+        // }
         public PdfPrintService(ILogger<PdfPrintService> logger)
         {
             _logger = logger;
         }
 
-        public void Print(Stream pdfStream, string printerName, string documentName = "file.pdf", string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false, bool printToFile = false)
+        public int Print(Stream pdfStream, string printerName, string documentName = "file.pdf", string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false, bool printToFile = false)
         {
             if (pdfStream == null)
                 throw new ArgumentNullException(nameof(pdfStream));
@@ -30,7 +60,12 @@ namespace PrintIt.Core
             _logger.LogInformation($"Printing PDF containing {document.PageCount} page(s) to printer '{printerName}'");
 
             using var printDocument = new PrintDocument();
-            printDocument.DocumentName = documentName;
+
+            // Append a unique identifier to the documentName
+            string uniqueNameId = DateTime.Now.ToString("yyyyMMddHHmmss");
+            printDocument.DocumentName = $"{documentName}_{uniqueNameId}";
+
+            // printDocument.DocumentName = documentName;
             printDocument.PrinterSettings.PrinterName = printerName;
             printDocument.PrinterSettings.Copies = (short)Math.Clamp(numberOfCopies, 1, short.MaxValue);
             printDocument.DefaultPageSettings.Color = false; // Set the page default's to not print in color
@@ -95,8 +130,50 @@ namespace PrintIt.Core
             PrintState state = PrintStateFactory.Create(document, pageRange);
             printDocument.PrintPage += (_, e) => PrintDocumentOnPrintPage(e, state);
             printDocument.QueryPageSettings += (_, e) => MyPrintQueryPageSettingsEvent(e, chosenSource);
+
+            // The PrintDocument class does not know anything about the Job to be printed. The Id will be given
+            // by the operating system (in this case the Print Spooler that manages printers and print jobs)
             printDocument.Print();
             _logger.LogInformation($"Printing Document Page Settings: {printDocument.DefaultPageSettings}");
+
+            // Get the print queue
+            LocalPrintServer printServer = new LocalPrintServer();
+            PrintQueue printQueue = printServer.GetPrintQueue(printerName);
+
+            // Set an undefined job
+            int jobId = -1;
+
+            // Get the job ID from the Queue given the unique document name
+            PrintJobInfoCollection jobs = printQueue.GetPrintJobInfoCollection();
+            foreach (PrintSystemJobInfo job in jobs)
+            {
+                if (job.Name == $"{documentName}_{uniqueNameId}")
+                {
+                    jobId = job.JobIdentifier;
+                    _logger.LogInformation($"Job ID: {jobId}");
+                    break;
+                }
+            }
+
+            // After calling Print() method we can use the Print Spooler API. However, using this method it cant ensure
+            // that we retrieve the last printed job if there are multiple applications that can send print jobs
+            // to the same printer!!!!
+            // IntPtr hPrinter;
+            // OpenPrinter(printerName, out hPrinter, IntPtr.Zero);
+            // uint pcbNeeded = 0;
+            // uint pcReturned = 0;
+            // EnumJobs(hPrinter, 0, 1, 1, IntPtr.Zero, 0, ref pcbNeeded, ref pcReturned);
+            // IntPtr pJobInfo = Marshal.AllocHGlobal((int)pcbNeeded);
+            // EnumJobs(hPrinter, 0, 1, 1, pJobInfo, pcbNeeded, ref pcbNeeded, ref pcReturned);
+            // JOB_INFO_1[] jobInfo1 = new JOB_INFO_1[pcReturned];
+            // IntPtr pTemp = pJobInfo;
+            // for (int i = 0; i < pcReturned; i++)
+            // {
+            //     jobInfo1[i] = (JOB_INFO_1)Marshal.PtrToStructure(pTemp, typeof(JOB_INFO_1));
+            //     pTemp += Marshal.SizeOf(typeof(JOB_INFO_1));
+            // }
+            // ClosePrinter(hPrinter);
+            return jobId;
         }
 
         public void PrintZPLFile(string printerName, Stream fileStream)
@@ -193,17 +270,94 @@ namespace PrintIt.Core
                 e.PageSettings.PaperSource = paperSource;
             }
         }
+
+        public Dictionary<int, JobStatus> GetQueueInfo(string printerName)
+        {
+            LocalPrintServer printServer = new LocalPrintServer();
+
+            try
+            {
+                PrintQueue printQueue = new PrintQueue(printServer, printerName);
+
+                var printJobs = printQueue.GetPrintJobInfoCollection();
+                foreach (PrintSystemJobInfo printJob in printJobs)
+                {
+                    _jobStatuses[printJob.JobIdentifier] = new JobStatus { JobId = printJob.JobIdentifier, Status = printJob.JobStatus, NumberOfPagesPrinted = printJob.NumberOfPagesPrinted, NumberOfPages = printJob.NumberOfPages, Progress = printJob.NumberOfPagesPrinted / printJob.NumberOfPages };
+
+                    _logger.LogInformation("Job ID: " + printJob.JobIdentifier);
+                    _logger.LogInformation("Job Status: " + printJob.JobStatus);
+                    _logger.LogInformation("Number of Pages Printed: " + printJob.NumberOfPagesPrinted);
+                    _logger.LogInformation("Total Pages: " + printJob.NumberOfPages);
+                    _logger.LogInformation("Progress: " + (printJob.NumberOfPagesPrinted / printJob.NumberOfPages));
+                }
+            }
+            catch (PrintQueueException ex)
+            {
+                _logger.LogInformation($"Failed to get print queue for printer '{printerName}': {ex.Message}");
+            }
+
+            return _jobStatuses;
+        }
+
+        public JobStatus GetJobInfo(string printerName, int jobId)
+        {
+            LocalPrintServer printServer = new LocalPrintServer();
+            JobStatus jobInfoObj = new JobStatus();
+            try
+            {
+                PrintQueue printQueue = new PrintQueue(printServer, printerName);
+                var printJobs = printQueue.GetPrintJobInfoCollection();
+
+                foreach (PrintSystemJobInfo jobInfo in printJobs)
+                {
+                    if (jobInfo.JobIdentifier == jobId)
+                    {
+                        // jobInfo now contains the information of the print job with the ID you're looking for
+                        // You can access its properties here, for example:
+                        _logger.LogInformation($"Job name: {jobInfo.Name}");
+                        _logger.LogInformation($"Job status: {jobInfo.JobStatus}");
+
+                        // Get the number of pages printed and remaining
+                        int pagesPrinted = jobInfo.NumberOfPagesPrinted;
+                        int totalPages = jobInfo.NumberOfPages;
+                        int pagesLeft = totalPages - pagesPrinted;
+
+                        _logger.LogInformation($"Pages printed: {pagesPrinted}");
+                        _logger.LogInformation($"Total pages: {totalPages}");
+                        _logger.LogInformation($"Pages left: {pagesLeft}");
+
+                        jobInfoObj.JobId = jobInfo.JobIdentifier;
+                        jobInfoObj.Status = jobInfo.JobStatus;
+                        jobInfoObj.NumberOfPagesPrinted = jobInfo.NumberOfPagesPrinted;
+                        jobInfoObj.NumberOfPages = jobInfo.NumberOfPages;
+                        jobInfoObj.Progress = jobInfo.NumberOfPages != 0 ? (double)jobInfo.NumberOfPagesPrinted / jobInfo.NumberOfPages : 0;
+                        break;
+                    }
+                }
+            }
+            catch (PrintQueueException ex)
+            {
+                _logger.LogInformation($"Failed to get print queue for printer '{printerName}': {ex.Message}");
+                throw;
+            }
+
+            return jobInfoObj;
+        }
     }
 
     public interface IPdfPrintService
     {
-        void Print(Stream pdfStream, string printerName, string documentName, string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false, bool printToFile = false);
+        int Print(Stream pdfStream, string printerName, string documentName, string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false, bool printToFile = false);
 
         void PrintSimpleText(string printerName);
 
         void PrintZPL(string printerName, string file);
 
         void PrintZPLFile(string printerName, Stream fileStream);
+
+        Dictionary<int, JobStatus> GetQueueInfo(string printerName);
+
+        JobStatus GetJobInfo(string printerName, int jobId);
     }
 
     public sealed class SelectPaperSizeException : Exception
