@@ -1,11 +1,14 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Drawing.Imaging;
+using System.Collections.Generic;
+
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PrintIt.Core;
+using System.Linq;
 
 namespace PrintIt.ServiceHost.Controllers
 {
@@ -22,10 +25,11 @@ namespace PrintIt.ServiceHost.Controllers
 
         [HttpPost]
         [Route("from-pdf")]
-        public async Task<IActionResult> PrintFromPdf([FromForm] PrintFromTemplateRequest request)
+        public async Task<Dictionary<string, int>> PrintFromPdf([FromForm] PrintFromTemplateRequest request)
         {
             await using Stream pdfStream = request.PdfFile.OpenReadStream();
-            _pdfPrintService.Print(pdfStream,
+            // print returns the job to be printed after being put in the queue
+            int jobId = _pdfPrintService.Print(pdfStream,
                 printerName: request.PrinterPath,
                 documentName: request.DocumentName,
                 pageRange: request.PageRange,
@@ -35,7 +39,14 @@ namespace PrintIt.ServiceHost.Controllers
                 isColor: request.IsColor,
                 isLandscape: request.IsLandscape,
                 printToFile: request.PrintToFile);
-            return Ok();
+
+            // KeyValuePair<string, int> job = new KeyValuePair<string, int>("jobId", jobId);
+            Dictionary<string, int> job = new Dictionary<string, int>
+            {
+                { "jobId", jobId }
+            };
+
+            return job;
         }
 
         [HttpPost]
@@ -47,6 +58,23 @@ namespace PrintIt.ServiceHost.Controllers
             // _pdfPrintService.PrintZPL(request.PrinterPath, request.File); 
             return Ok();
         }
+
+        [HttpPost]
+        [Route("statusqueue")]
+        public ActionResult<List<JobStatus>> QueueInfo([FromForm] QueueStatusRequest request)
+        {
+            Dictionary<int, JobStatus> queueInfo = _pdfPrintService.GetQueueInfo(request.PrinterPath);
+            List<JobStatus> list = queueInfo.Values.ToList();
+            return list;
+        }
+
+        [HttpPost]
+        [Route("statusjob")]
+        public ActionResult<JobStatus> JobInfo([FromForm] JobStatusRequest request)
+        {
+            return _pdfPrintService.GetJobInfo(request.PrinterPath, request.JobId);
+        }
+
         // public IActionResult PrintSimpleTextPipe([FromForm] PrintSimpleTextTemplateRequest request)
         // {
         //     _pdfPrintService.PrintSimpleText(request.PrinterPath);   
@@ -91,5 +119,18 @@ namespace PrintIt.ServiceHost.Controllers
         public string PrinterPath { get; set; }
         [Required]
         public IFormFile File { get; set; }
+    }
+
+    public sealed class JobStatusRequest
+    {
+        [Required]
+        public string PrinterPath { get; set; }
+        [Required]
+        public int JobId { get; set; }
+    }
+    public sealed class QueueStatusRequest
+    {
+        [Required]
+        public string PrinterPath { get; set; }
     }
 }
