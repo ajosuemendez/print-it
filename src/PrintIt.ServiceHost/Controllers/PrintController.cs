@@ -33,8 +33,8 @@ namespace PrintIt.ServiceHost.Controllers
                 numberOfCopies: request.Copies ?? 1,
                 paperSource: request.PaperSource, 
                 paperSize: request.PaperSize,
-                isColor: request.IsColor,
-                isLandscape: request.IsLandscape);
+                isColor: request.IsColor ?? false,
+                isLandscape: request.IsLandscape ?? false);
 
             Dictionary<string, int> job = new Dictionary<string, int>
             {
@@ -72,9 +72,9 @@ namespace PrintIt.ServiceHost.Controllers
 
         public string PaperSize { get; set; }
 
-        public bool IsColor { get; set; }
+        public bool? IsColor { get; set; }
 
-        public bool IsLandscape { get; set; }
+        public bool? IsLandscape { get; set; }
     }
 
     public sealed class PrintSimpleTextTemplateRequest
