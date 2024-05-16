@@ -21,30 +21,6 @@ namespace PrintIt.Core
 
         private readonly Dictionary<int, JobStatus> _jobStatuses = new Dictionary<int, JobStatus>();
 
-        // [DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
-        // public static extern bool OpenPrinter(string printerName, out IntPtr hPrinter, IntPtr defaultPrinter);
-
-        // [DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
-        // public static extern bool EnumJobs(IntPtr hPrinter, uint firstJob, uint noJobs, uint level, IntPtr jobInfo, uint cbBuf, ref uint pcbNeeded, ref uint pcReturned);
-
-        // [DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
-        // public static extern bool ClosePrinter(IntPtr hPrinter);
-
-        // public struct JOB_INFO_1
-        // {
-        //     public uint JobId;
-        //     public string PrinterName;
-        //     public string MachineName;
-        //     public string UserName;
-        //     public string Document;
-        //     public string DataType;
-        //     public string Status;
-        //     public uint StatusValue;
-        //     public uint Priority;
-        //     public uint Position;
-        //     public uint TotalPages;
-        //     public uint PagesPrinted;
-        // }
         public PdfPrintService(ILogger<PdfPrintService> logger)
         {
             _logger = logger;
@@ -59,7 +35,9 @@ namespace PrintIt.Core
 
             _logger.LogInformation($"Printing PDF containing {document.PageCount} page(s) to printer '{printerName}'");
 
-            using var printDocument = new PrintDocument();
+            CustomPrintController customPrintController = new CustomPrintController();
+            using var printDocument = new CustomPrintDocument();
+            printDocument.PrintController = customPrintController;
 
             // Append a unique identifier to the documentName
             string uniqueNameId = DateTime.Now.ToString("yyyyMMddHHmmss");
@@ -131,48 +109,31 @@ namespace PrintIt.Core
             printDocument.PrintPage += (_, e) => PrintDocumentOnPrintPage(e, state);
             printDocument.QueryPageSettings += (_, e) => MyPrintQueryPageSettingsEvent(e, chosenSource);
 
-            // The PrintDocument class does not know anything about the Job to be printed. The Id will be given
-            // by the operating system (in this case the Print Spooler that manages printers and print jobs)
             printDocument.Print();
-            _logger.LogInformation($"Printing Document Page Settings: {printDocument.DefaultPageSettings}");
-
-            // Get the print queue
-            LocalPrintServer printServer = new LocalPrintServer();
-            PrintQueue printQueue = printServer.GetPrintQueue(printerName);
-
-            // Set an undefined job
             int jobId = -1;
 
-            // Get the job ID from the Queue given the unique document name
-            PrintJobInfoCollection jobs = printQueue.GetPrintJobInfoCollection();
-            foreach (PrintSystemJobInfo job in jobs)
-            {
-                if (job.Name == $"{documentName}_{uniqueNameId}")
-                {
-                    jobId = job.JobIdentifier;
-                    _logger.LogInformation($"Job ID: {jobId}");
-                    break;
-                }
-            }
+            jobId = ((CustomPrintController)printDocument.PrintController).JobId;
+            _logger.LogInformation($"Printing Document Page Settings: {printDocument.DefaultPageSettings}");
 
-            // After calling Print() method we can use the Print Spooler API. However, using this method it cant ensure
-            // that we retrieve the last printed job if there are multiple applications that can send print jobs
-            // to the same printer!!!!
-            // IntPtr hPrinter;
-            // OpenPrinter(printerName, out hPrinter, IntPtr.Zero);
-            // uint pcbNeeded = 0;
-            // uint pcReturned = 0;
-            // EnumJobs(hPrinter, 0, 1, 1, IntPtr.Zero, 0, ref pcbNeeded, ref pcReturned);
-            // IntPtr pJobInfo = Marshal.AllocHGlobal((int)pcbNeeded);
-            // EnumJobs(hPrinter, 0, 1, 1, pJobInfo, pcbNeeded, ref pcbNeeded, ref pcReturned);
-            // JOB_INFO_1[] jobInfo1 = new JOB_INFO_1[pcReturned];
-            // IntPtr pTemp = pJobInfo;
-            // for (int i = 0; i < pcReturned; i++)
-            // {
-            //     jobInfo1[i] = (JOB_INFO_1)Marshal.PtrToStructure(pTemp, typeof(JOB_INFO_1));
-            //     pTemp += Marshal.SizeOf(typeof(JOB_INFO_1));
+            // _logger.LogInformation("The job ID of the current print job is: " + printDocument.JobId);
+
+            // jobId = printDocument.JobId;
+
+            // Get the print queue
+            // LocalPrintServer printServer = new LocalPrintServer();
+            // PrintQueue printQueue = printServer.GetPrintQueue(printerName);
+
+            // // Get the job ID from the Queue given the unique document name
+            // PrintJobInfoCollection jobs = printQueue.GetPrintJobInfoCollection();
+            // foreach (PrintSystemJobInfo job in jobs)
+            // {s
+            //     if (job.Name == $"{documentName}_{uniqueNameId}")
+            //     {
+            //         jobId = job.JobIdentifier;
+            //         _logger.LogInformation($"Job ID: {jobId}");
+            //         break;
+            //     }
             // }
-            // ClosePrinter(hPrinter);
             return jobId;
         }
 
