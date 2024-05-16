@@ -1,14 +1,11 @@
 using System;
 using System.ComponentModel.DataAnnotations;
-using System.Drawing.Imaging;
 using System.Collections.Generic;
-
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PrintIt.Core;
-using System.Linq;
 
 namespace PrintIt.ServiceHost.Controllers
 {
@@ -93,17 +90,4 @@ namespace PrintIt.ServiceHost.Controllers
         [Required]
         public IFormFile File { get; set; }
     }
-
-    // public sealed class JobStatusRequest
-    // {
-    //     [Required]
-    //     public string PrinterPath { get; set; }
-    //     [Required]
-    //     public int JobId { get; set; }
-    // }
-    // public sealed class QueueStatusRequest
-    // {
-    //     [Required]
-    //     public string PrinterPath { get; set; }
-    // }
 }
