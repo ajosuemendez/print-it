@@ -35,15 +35,15 @@ namespace PrintIt.Core
 
             _logger.LogInformation($"Printing PDF containing {document.PageCount} page(s) to printer '{printerName}'");
 
-            CustomPrintController customPrintController = new CustomPrintController();
-            using var printDocument = new CustomPrintDocument();
-            printDocument.PrintController = customPrintController;
+            using var printDocument = new PrintDocument();
 
-            // Append a unique identifier to the documentName
+            // Uncomment the following line to use CustomPrintController
+            // printDocument.PrintController = new CustomPrintController();
+
+            // Create a unique name for requesting progress later on
             string uniqueNameId = DateTime.Now.ToString("yyyyMMddHHmmss");
             printDocument.DocumentName = $"{documentName}_{uniqueNameId}";
 
-            // printDocument.DocumentName = documentName;
             printDocument.PrinterSettings.PrinterName = printerName;
             printDocument.PrinterSettings.Copies = (short)Math.Clamp(numberOfCopies, 1, short.MaxValue);
             printDocument.DefaultPageSettings.Color = false; // Set the page default's to not print in color
@@ -102,30 +102,12 @@ namespace PrintIt.Core
             printDocument.QueryPageSettings += (_, e) => MyPrintQueryPageSettingsEvent(e, chosenSource);
 
             printDocument.Print();
-            int jobId = -1;
+            string uniqueJobName = $"{documentName}_{uniqueNameId}";
 
-            jobId = ((CustomPrintController)printDocument.PrintController).JobId;
-            _logger.LogInformation($"Printing Document Page Settings: {printDocument.DefaultPageSettings}");
-
-            // _logger.LogInformation("The job ID of the current print job is: " + printDocument.JobId);
-
-            // jobId = printDocument.JobId;
-
-            // Get the print queue
-            // LocalPrintServer printServer = new LocalPrintServer();
-            // PrintQueue printQueue = printServer.GetPrintQueue(printerName);
-
-            // // Get the job ID from the Queue given the unique document name
-            // PrintJobInfoCollection jobs = printQueue.GetPrintJobInfoCollection();
-            // foreach (PrintSystemJobInfo job in jobs)
-            // {s
-            //     if (job.Name == $"{documentName}_{uniqueNameId}")
-            //     {
-            //         jobId = job.JobIdentifier;
-            //         _logger.LogInformation($"Job ID: {jobId}");
-            //         break;
-            //     }
-            // }
+            // If using CustomPrintController Uncomment the following line
+            // int jobId = ((CustomPrintController)printDocument.PrintController).JobId;
+            // If using CustomPrintController Comment the following line
+            int jobId = GetJobId(uniqueJobName, printerName);
             return jobId;
         }
 
@@ -147,8 +129,6 @@ namespace PrintIt.Core
 
         public void PrintZPL(string printerName, string file)
         {
-            // string zplCommandsFilePath = @"C:\zpl-test.txt";
-            // System.IO.File.Copy(zplCommandsFilePath, printerName);
             IPrinter printer = new Printer();
 
             // Specify the file path and filename (e.g., ZPL file)
@@ -163,23 +143,6 @@ namespace PrintIt.Core
             {
                 _logger.LogInformation($"Error printing ZPL: {ex.Message}");
             }
-
-            // string zplCode = "^XA^FO50,50^A0N,50,50^FDHello, Zebra!^FS^XZ";
-
-            // byte[] zplBytes = System.Text.Encoding.UTF8.GetBytes(zplCode);
-
-            // try
-            // {
-            //     using (var printer = new RawPrinterHelper("YourPrinterName"))
-            //     {
-            //         printer.SendBytesToPrinter(zplBytes);
-            //     }
-            // }
-            // catch (Exception ex)
-            // {
-            //     // Handle any exceptions (printer not found, etc.)
-            //     _logger.LogInformation($"Error printing ZPL: {ex.Message}");
-            // }
         }
 
         public void PrintSimpleText(string printerName)
@@ -303,6 +266,29 @@ namespace PrintIt.Core
             }
 
             return jobInfoObj;
+        }
+
+        private int GetJobId(string uniqueDocumentName, string printerName)
+        {
+            // If no jobs found then return -1
+            int jobId = -1;
+
+            // Get the print queue
+            LocalPrintServer printServer = new LocalPrintServer();
+            PrintQueue printQueue = printServer.GetPrintQueue(printerName);
+
+            // Get the job ID from the Queue given the unique document name
+            PrintJobInfoCollection jobs = printQueue.GetPrintJobInfoCollection();
+            foreach (PrintSystemJobInfo job in jobs)
+            {
+                if (job.Name == uniqueDocumentName)
+                {
+                    jobId = job.JobIdentifier;
+                    break;
+                }
+            }
+
+            return jobId;
         }
     }
 
