@@ -26,7 +26,7 @@ namespace PrintIt.Core
             _logger = logger;
         }
 
-        public int Print(Stream pdfStream, string printerName, string documentName = "file.pdf", string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false, bool printToFile = false)
+        public int Print(Stream pdfStream, string printerName, string documentName = "file.pdf", string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false)
         {
             if (pdfStream == null)
                 throw new ArgumentNullException(nameof(pdfStream));
@@ -96,14 +96,6 @@ namespace PrintIt.Core
             }
 
             _logger.LogInformation($"Printing Document in Color ? : {printDocument.DefaultPageSettings.Color}");
-
-            if (printToFile)
-            {
-                string uniqueId = DateTime.Now.ToString("yyyyMMddHHmmss");
-                string newDocumentName = $"{documentName}_{uniqueId}.pdf";
-                printDocument.PrinterSettings.PrintFileName = $"C:/Users/AlejandroLopez/Documents/VirtualPrintFiles/{newDocumentName}";
-                printDocument.PrinterSettings.PrintToFile = true; // Skip the save file dialog
-            }
 
             PrintState state = PrintStateFactory.Create(document, pageRange);
             printDocument.PrintPage += (_, e) => PrintDocumentOnPrintPage(e, state);
@@ -308,7 +300,7 @@ namespace PrintIt.Core
 
     public interface IPdfPrintService
     {
-        int Print(Stream pdfStream, string printerName, string documentName, string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false, bool printToFile = false);
+        int Print(Stream pdfStream, string printerName, string documentName, string pageRange = null, int numberOfCopies = 1, string paperSource = null, string paperSize = null, bool isColor = false, bool isLandscape = false);
 
         void PrintSimpleText(string printerName);
 
