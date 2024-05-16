@@ -40,7 +40,6 @@ namespace PrintIt.ServiceHost.Controllers
                 isLandscape: request.IsLandscape,
                 printToFile: request.PrintToFile);
 
-            // KeyValuePair<string, int> job = new KeyValuePair<string, int>("jobId", jobId);
             Dictionary<string, int> job = new Dictionary<string, int>
             {
                 { "jobId", jobId }
@@ -55,7 +54,6 @@ namespace PrintIt.ServiceHost.Controllers
         {
             await using Stream streamFile = request.File.OpenReadStream();
             _pdfPrintService.PrintZPLFile(request.PrinterPath, streamFile); 
-            // _pdfPrintService.PrintZPL(request.PrinterPath, request.File); 
             return Ok();
         }
 
@@ -74,12 +72,6 @@ namespace PrintIt.ServiceHost.Controllers
         {
             return _pdfPrintService.GetJobInfo(request.PrinterPath, request.JobId);
         }
-
-        // public IActionResult PrintSimpleTextPipe([FromForm] PrintSimpleTextTemplateRequest request)
-        // {
-        //     _pdfPrintService.PrintSimpleText(request.PrinterPath);   
-        //     return Ok();
-        // }
     }
 
     public sealed class PrintFromTemplateRequest
