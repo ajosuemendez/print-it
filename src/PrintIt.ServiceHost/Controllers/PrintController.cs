@@ -61,6 +61,9 @@ namespace PrintIt.ServiceHost.Controllers
         public ActionResult<List<JobStatus>> QueueInfo([FromForm] QueueStatusRequest request)
         {
             Dictionary<int, JobStatus> queueInfo = _pdfPrintService.GetQueueInfo(request.PrinterPath);
+            // by default dotnet is not allowing object serialization for sending Dictionaries (or JSON)
+            // That's why I am transforming it to a List.
+            // TODO later: Find a package to allow sending JSON Objects.
             List<JobStatus> list = queueInfo.Values.ToList();
             return list;
         }

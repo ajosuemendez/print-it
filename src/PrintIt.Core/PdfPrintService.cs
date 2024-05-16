@@ -235,13 +235,21 @@ namespace PrintIt.Core
                 var printJobs = printQueue.GetPrintJobInfoCollection();
                 foreach (PrintSystemJobInfo printJob in printJobs)
                 {
-                    _jobStatuses[printJob.JobIdentifier] = new JobStatus { JobId = printJob.JobIdentifier, Status = printJob.JobStatus, NumberOfPagesPrinted = printJob.NumberOfPagesPrinted, NumberOfPages = printJob.NumberOfPages, Progress = printJob.NumberOfPagesPrinted / printJob.NumberOfPages };
+                    float progress = 0;
+
+                    // Sometimes the PrintJob returns 0 pages to be printed when something goes wrong
+                    if (printJob.NumberOfPages != 0)
+                    {
+                        progress = printJob.NumberOfPagesPrinted / printJob.NumberOfPages;
+                    }
+
+                    _jobStatuses[printJob.JobIdentifier] = new JobStatus { JobId = printJob.JobIdentifier, Status = printJob.JobStatus, NumberOfPagesPrinted = printJob.NumberOfPagesPrinted, NumberOfPages = printJob.NumberOfPages, Progress = progress };
 
                     _logger.LogInformation("Job ID: " + printJob.JobIdentifier);
                     _logger.LogInformation("Job Status: " + printJob.JobStatus);
                     _logger.LogInformation("Number of Pages Printed: " + printJob.NumberOfPagesPrinted);
                     _logger.LogInformation("Total Pages: " + printJob.NumberOfPages);
-                    _logger.LogInformation("Progress: " + (printJob.NumberOfPagesPrinted / printJob.NumberOfPages));
+                    _logger.LogInformation("Progress: " + progress);
                 }
             }
             catch (PrintQueueException ex)
