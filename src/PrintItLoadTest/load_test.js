@@ -8,26 +8,25 @@ export let options = {
     insecureSkipTLSVerify: true,
     noConnectionReuse: false,
     stages: [
-        { duration: '1m', target: 20},
-        { duration: '5m', target: 20},
+        { duration: '10s', target: 5},
+        { duration: '5m', target: 5},
         { duration: '1m', target: 0},
     ],
-    // thresholds: {
-    //     http_req_duration: ['p(99)<100'] // 99% must be below 100ms
-    // }
 };
+
+const params = { timeout: 10000 };
 
 const API_BASE_URL = 'http://localhost:7000';
 
 export default () => {
     const formData = {
-        PrinterPath: 'Brother Color Leg Type1 Class Driver',
+        PrinterPath: 'PDFCreator',
         PdfFile: http.file(fileData, 'test.pdf'),
         DocumentName: "test.pdf",
-        PrintToFile: true
+        PrintToFile: false
     };
 
-    const response = http.post(`${API_BASE_URL}/print/from-pdf`, formData);
+    const response = http.post(`${API_BASE_URL}/print/from-pdf`, formData, params);
 
     // Check if the request was successful
     check(response, {
