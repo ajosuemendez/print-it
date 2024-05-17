@@ -1,19 +1,31 @@
-# print-it
+## Introduction
 
-Windows service for printing PDF files to a local or network printer in the background.
+This document provides detailed information about the Printing Windows Service. Currently this service allows users to print documents via HTTP Request on a specified printer.
 
-## Usage instructions
+## Requirements
+You need to have installed .NetSDK 8. Alternatively, you can use the VS Code plugin C# Dev Kit
 
-1. Download the [latest release](https://github.com/huysentruitw/print-it/releases/latest)
-2. Extract the package to f.e. C:\print-it
-3. Create print-it as a Windows service from an elevated command line: `sc create "PrintIt" binPath="C:\print-it\PrintIt.ServiceHost.exe" start=auto`
-4. Start the service from the command line: `sc start PrintIt`
-5. Check if the service is listening on port 7000 by running: `netstat -a | find ":7000"`
+## Usage instructions using VS Code
 
-## API
+1. Clone this repository
+2. We are currently using the pdfium-v8-win-x64 binaries. If want you can download and add the latest version of the PDFium binaries: https://github.com/bblanchon/pdfium-binaries
+3. If you decide to update the binaries make sure that the csproject is properly pointing to those. You would have to modify path where the binary is found in PrintIt.ServiceHost.csproj.
+```xml
+<Content Include="..\..\pdfium-v8-win-x64\bin\pdfium.dll">
+```
+4. Create a .env file in the PrintIt.Servicehost folder with the following values:
 
-By default, _PrintIt.ServiceHost_ is listening on http://localhost:7000. The endpoint is configurable in _appsettings.json_.
+  ```xml
+PORT=7000
+HOST=http://localhost:
+LOGGING__LOGLEVEL__DEFAULT=Debug
+LOGGING__LOGLEVEL__SYSTEM=Information
+LOGGING__LOGLEVEL__MICROSOFT=Information
+```
 
+5. If you have downloaded the VS code extension then you can start the service by clicking the play button in VS Code. Make sure to first open the Programm.cs in PrintIt.Servicehost.csproj and then click play.
+
+   
 #### [GET] /printers/list
 
 List all available printers on the system.
