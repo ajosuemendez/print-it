@@ -3,12 +3,13 @@
 This document provides detailed information about the Printing Windows Service. Currently this service allows users to print documents via HTTP Request on a specified printer.
 
 ## Requirements
-You need to have installed .NetSDK 8. Alternatively, you can use the VS Code plugin C# Dev Kit
+- VS Code
+- VS Code plugin C# Dev Kit
 
 ## Usage instructions using VS Code
 
 1. Clone this repository
-2. We are currently using the pdfium-v8-win-x64 binaries. If want you can download and add the latest version of the PDFium binaries: https://github.com/bblanchon/pdfium-binaries
+2. We are currently using the pdfium-v8-win-x64 binaries. If you want you can download and add the latest version of the PDFium binaries: https://github.com/bblanchon/pdfium-binaries
 3. If you decide to update the binaries make sure that the csproject is properly pointing to those. You would have to modify path where the binary is found in PrintIt.ServiceHost.csproj.
 ```xml
 <Content Include="..\..\pdfium-v8-win-x64\bin\pdfium.dll">
@@ -25,7 +26,26 @@ LOGGING__LOGLEVEL__MICROSOFT=Information
 
 5. If you have downloaded the VS code extension then you can start the service by clicking the play button in VS Code. Make sure to first open the Programm.cs in PrintIt.Servicehost.csproj and then click play.
 
-   
+If everything is good then the application should be listening on port [7000](http://localhost:7000/).
+
+## Test API with SWAGGER
+
+You can have access to te swagger UI in http://localhost:7000/doc
+
+We currently have 3 controllers: Info, Print and Printers
+
+### INFO Endpoint
+#### [POST] /info/statusqueue
+Requires: Printer Path
+
+Returns: All the jobs that are currently in the queue for the corresponding printer
+
+#### [POST] /info/statusjob
+Requires: Printer Path and a Job Id
+
+Returns: Information about the specific job (how many pages to be printed and how many pages are already printed for example)
+
+### PRINTERS Endpoints
 #### [GET] /printers/list
 
 List all available printers on the system.
@@ -42,22 +62,33 @@ List all paper sizes on the printer with the UNC-path `\\REMOTE_PC_NAME\PRINTER-
 
 Install the network printer with the UNC-path `\\REMOTE_PC_NAME\PRINTER-NAME`. 
 
+### PRINT Endpoints
 #### [POST] /print/from-pdf
 
 To print a PDF on a given printer, post a multipart form to this end-point with the following fields:
 
-Field Name   | Required           | Content
------------- | ------------------ | ---------
-PdfFile      | :heavy_check_mark: | The PDF file to print (Content-type: application/pdf)
-PrinterPath  | :heavy_check_mark: | The UNC-path of the printer to send the PDF to
-PageRange    |                    | An optional page range string (f.e. "1-5", "1, 3", "1, 4-8", "2-", "-5")
-Copies       |                    | An optional number of copies (defaults to 1)
-PaperSource  |                    | An optional name of the page source. See GET for valid page sources
-PaperSize    |                    | An optional name of the page size. See GET for valid page sizes
+Field Name     | Required           | Content
+------------   | ------------------ | ---------
+PdfFile        | :heavy_check_mark: | The PDF file to print (Content-type: application/pdf)
+PrinterPath    | :heavy_check_mark: | The UNC-path of the printer to send the PDF to
+DocumentName   |                    | An optional Name for the job to be printed
+PageRange      |                    | An optional page range string (f.e. "1-5", "1, 3", "1, 4-8", "2-", "-5")
+Copies         |                    | An optional number of copies (defaults to 1)
+PaperSource    |                    | An optional name of the page source. See GET for valid page sources
+PaperSize      |                    | An optional name of the page size. See GET for valid page sizes
+IsColor        |                    | If true then print in Color (default false)
+IsLandscape    |                    | If true then print in Landscape mode (default false)
+
+#### [POST] /print/pipe
+
+You can also Print from a Raw stream file.
+
+Field Name     | Required           | Content
+------------   | ------------------ | ---------
+File           | :heavy_check_mark: | File to print
+PrinterPath    | :heavy_check_mark: | The UNC-path of the printer to send the PDF to
 
 ## PDFium
 
 This project uses the [PDFium library](https://pdfium.googlesource.com/) for rendering the PDF file which is licensed under Apache 2.0, see [LICENSE](pdfium-binary/LICENSE).
-
-The version included in this repository under the folder `pdfium-binary` was taken from https://github.com/bblanchon/pdfium-binaries/releases/tag/chromium/4194.
 
