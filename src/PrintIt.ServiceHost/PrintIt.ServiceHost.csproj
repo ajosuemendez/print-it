@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\pdfium-v8-win-x64\bin\pdfium.dll">
+    <Content Include="..\..\pdfium-v8-win-x64\binaries\pdfium.dll">
       <Link>pdfium.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
