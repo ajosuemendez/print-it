@@ -12,7 +12,7 @@ This document provides detailed information about the Printing Windows Service. 
 2. We are currently using the pdfium-v8-win-x64 binaries. If you want you can download and add the latest version of the PDFium binaries: https://github.com/bblanchon/pdfium-binaries
 3. If you decide to update the binaries make sure that the csproject is properly pointing to those. You would have to modify path where the binary is found in PrintIt.ServiceHost.csproj.
 ```xml
-<Content Include="..\..\pdfium-v8-win-x64\bin\pdfium.dll">
+<Content Include="..\..\pdfium-v8-win-x64\binaries\pdfium.dll">
 ```
 4. Create a .env file in the PrintIt.Servicehost folder with the following values:
 
