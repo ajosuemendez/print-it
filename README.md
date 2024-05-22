@@ -9,12 +9,12 @@ This document provides detailed information about the Printing Windows Service. 
 ## Usage instructions using VS Code
 
 1. Clone this repository
-2. We are currently using the pdfium-v8-win-x64 binaries. If you want you can download and add the latest version of the PDFium binaries: https://github.com/bblanchon/pdfium-binaries
-3. If you decide to update the binaries make sure that the csproject is properly pointing to those. You would have to modify path where the binary is found in PrintIt.ServiceHost.csproj.
+2. We are currently using the pdfium-v8-win-x64 binaries. If you want you can download and add the latest version of the PDFium binaries: https://github.com/bblanchon/pdfium-binaries (Make sure to use PDFium V8)
+3. If you decide to update the binaries make sure that the csproject is properly pointing to those. You would have to modify path where the binary is found in /src/PrintIt.ServiceHost/PrintIt.ServiceHost.csproj.
 ```xml
 <Content Include="..\..\pdfium-v8-win-x64\binaries\pdfium.dll">
 ```
-4. Create a .env file in the PrintIt.Servicehost folder with the following values:
+4. Create a .env file in the /src/PrintIt.ServiceHost/ folder with the following values:
 
   ```xml
 PORT=7000
@@ -24,9 +24,9 @@ LOGGING__LOGLEVEL__SYSTEM=Information
 LOGGING__LOGLEVEL__MICROSOFT=Information
 ```
 
-5. If you have downloaded the VS code extension then you can start the service by clicking the play button in VS Code. Make sure to first open the Programm.cs in PrintIt.Servicehost.csproj and then click play.
+5. Open the Programm.cs in PrintIt.Servicehost.csproj and then click on the play button in the upper right side (You must have installed the VS Code plugin C# Dev Kit).
 
-If everything is good then the application should be listening on port [7000](http://localhost:7000/).
+6. Wait a few seconds until you see that the application is listening on port [7000](http://localhost:7000/).
 
 ## Test API with SWAGGER
 
