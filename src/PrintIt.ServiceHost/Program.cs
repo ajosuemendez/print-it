@@ -21,20 +21,33 @@ namespace PrintIt.ServiceHost
         {
             PdfLibrary.EnsureInitialized();
 
-            // For some reason the .env cant be found cause when we are starting in another folder when running dotnet run
-            string currentDirectory = Directory.GetCurrentDirectory();
-            while (!File.Exists(Path.Combine(currentDirectory, ".env")))
-            {
-                currentDirectory = Directory.GetParent(currentDirectory)?.FullName;
-                
-                // If we've reached the root directory and still haven't found the .env file
-                if (currentDirectory == null)
-                {
-                    throw new FileNotFoundException("Could not find the .env file.");
-                }
-            }
+            string envPath;
+            string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
-            string envPath = Path.Combine(currentDirectory, ".env");
+            if (Debugger.IsAttached)
+            {
+                // Running from a debugger
+                string currentDirectory = Directory.GetCurrentDirectory();
+                while (!File.Exists(Path.Combine(currentDirectory, ".env")))
+                {
+                    currentDirectory = Directory.GetParent(currentDirectory)?.FullName;
+                    
+                    // If we've reached the root directory and still haven't found the .env file
+                    if (currentDirectory == null)
+                    {
+                        throw new FileNotFoundException("Could not find the .env file.");
+                    }
+                }
+
+                envPath = Path.Combine(currentDirectory, ".env");
+            }
+            else
+            {
+                // Running from Service
+                string parentDirectory = Directory.GetParent(Directory.GetParent(baseDirectory).FullName).FullName;
+                envPath = Path.Combine(parentDirectory, "src\\PrintIt.ServiceHost\\.env");
+            }
+            
             DotNetEnv.Env.Load(envPath);
             
 
