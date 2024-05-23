@@ -5,8 +5,9 @@ This document provides detailed information about the Printing Windows Service. 
 ## Requirements
 - VS Code
 - VS Code plugin C# Dev Kit
+- .NET SDK
 
-## Usage instructions using VS Code
+## Usage instructions
 
 1. Clone this repository
 2. We are currently using the pdfium-v8-win-x64 binaries. If you want you can download and add the latest version of the PDFium binaries: https://github.com/bblanchon/pdfium-binaries (Make sure to use PDFium V8)
@@ -24,9 +25,38 @@ LOGGING__LOGLEVEL__SYSTEM=Information
 LOGGING__LOGLEVEL__MICROSOFT=Information
 ```
 
+### (Option 1) Using VS Code
+
 5. Open the Programm.cs in PrintIt.Servicehost.csproj and then click on the play button in the upper right side (You must have installed the VS Code plugin C# Dev Kit).
 
-6. Wait a few seconds until you see that the application is listening on port [7000](http://localhost:7000/).
+6. Wait a few seconds until you see that the application is listening on port [7000](http://localhost:7000/doc).
+
+### (Option 2) Automatic Set up as a Windows Service
+
+It is possible to set up the service automatically so we do not have to manually start the server from VS Code every time we initialize a windows session. If you executed Option 1 first make sure the application is not running so we do not run into port issues.
+
+5. Execute the create-print-sevice.bat **FROM THE ROOT DIRECTORY** of the project! (This is very important so the program can succesfully load the corresponding environment variables we set in step 4)
+```xml
+.\create-print-sevice.bat
+```
+
+After a few seconds you should see an output like this that confirms that the service was set up succesfully.
+
+```xml
+SERVICE_NAME: PrintIt
+        TYPE               : 10  WIN32_OWN_PROCESS
+        STATE              : 2  START_PENDING
+                                (NOT_STOPPABLE, NOT_PAUSABLE, IGNORES_SHUTDOWN)
+        WIN32_EXIT_CODE    : 0  (0x0)
+        SERVICE_EXIT_CODE  : 0  (0x0)
+        CHECKPOINT         : 0x0
+        WAIT_HINT          : 0x7d0
+        PID                : 2980
+        FLAGS              :
+```
+
+6. The application should be listening on port [7000](http://localhost:7000/doc).
+
 
 ## Test API with SWAGGER
 
@@ -36,14 +66,21 @@ We currently have 3 controllers: Info, Print and Printers
 
 ### INFO Endpoint
 #### [POST] /info/statusqueue
-Requires: Printer Path
+
+Field Name     | Required           | Content
+------------   | ------------------ | ---------
+PrinterPath    | :heavy_check_mark: | The UNC-path of the printer to send the PDF to
 
 Returns: All the jobs that are currently in the queue for the corresponding printer
 
 #### [POST] /info/statusjob
-Requires: Printer Path and a Job Id
 
-Returns: Information about the specific job (how many pages to be printed and how many pages are already printed for example)
+Field Name     | Required           | Content
+------------   | ------------------ | ---------
+PrinterPath    | :heavy_check_mark: | The UNC-path of the printer to send the PDF to
+JobId          | :heavy_check_mark: | Id corresponding to the Printing Job
+
+Returns: Information about the specific job (How many pages to be printed and how many pages are already printed for example)
 
 ### PRINTERS Endpoints
 #### [GET] /printers/list
